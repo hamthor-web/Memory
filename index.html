@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ein Wort – zwei Bedeutungen</title>
+<style>
+:root {
+  --paper:#f0eee7;
+  --ink:#242424;
+  --accent:#42a9c2;
+  --accent2:#f2c55a;
+  --good:#44ad6d;
+  --soft:#fffaf0;
+  --shadow:0 8px 20px rgba(65,53,35,.16);
+}
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  margin:0; min-height:100vh; color:var(--ink);
+  font-family: "Trebuchet MS", system-ui, sans-serif;
+  background:
+    radial-gradient(circle at 18% 25%, rgba(255,255,255,.8) 0 1px, transparent 2px) 0 0/29px 31px,
+    linear-gradient(115deg, rgba(180,170,155,.08), transparent 38%, rgba(255,255,255,.35) 53%, transparent 70%),
+    linear-gradient(25deg, rgba(150,140,125,.05), transparent 45%, rgba(255,255,255,.38)),
+    var(--paper);
+}
+.wrap { max-width:1180px; margin:auto; padding:14px; }
+.top {
+  background:rgba(255,255,255,.78); border:1px solid rgba(255,255,255,.95);
+  border-radius:22px; box-shadow:var(--shadow); padding:14px;
+}
+.title-row { display:flex; align-items:center; gap:12px; }
+.logo { width:72px; height:72px; border-radius:16px; object-fit:cover; flex:none; }
+h1 { margin:0; font-size:clamp(1.45rem,4vw,2.35rem); line-height:1.05; }
+.sub { margin:.3rem 0 0; opacity:.72; font-size:.95rem; }
+.controls {
+  display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px;
+}
+button {
+  border:0; background:#fff; color:var(--ink); font:inherit; font-weight:800;
+  border-radius:14px; padding:10px 13px; cursor:pointer;
+  box-shadow:0 3px 8px rgba(0,0,0,.10);
+}
+button:active { transform:translateY(1px); }
+button.active { outline:3px solid var(--accent); }
+button.primary { background:#ffe293; }
+button.preview { background:#dff4f8; }
+.status {
+  margin:12px 2px 9px; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;
+  font-weight:800; font-size:.95rem;
+}
+.grid {
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:11px;
+}
+.card { aspect-ratio:1/1; perspective:1000px; cursor:pointer; }
+.card.locked { cursor:default; }
+.inner {
+  position:relative; width:100%; height:100%;
+  transform-style:preserve-3d; transition:transform .44s ease;
+}
+.card.flipped .inner, .card.peek .inner { transform:rotateY(180deg); }
+.face {
+  position:absolute; inset:0; backface-visibility:hidden; border-radius:18px; overflow:hidden;
+  background:#fff; box-shadow:var(--shadow); border:3px solid rgba(236,184,55,.82);
+}
+.back { padding:6%; display:grid; place-items:center; background:#fffdfa; }
+.back img, .front img { width:100%; height:100%; object-fit:cover; display:block; }
+.back img { border-radius:12px; }
+.front { transform:rotateY(180deg); }
+.card.matched .front { filter:grayscale(.58) opacity(.70); }
+.check {
+  display:none; position:absolute; z-index:8; top:8px; right:8px;
+  width:34px; height:34px; border-radius:50%; align-items:center; justify-content:center;
+  background:var(--good); color:#fff; font-size:23px; font-weight:900;
+  box-shadow:0 3px 8px rgba(0,0,0,.23);
+}
+.card.matched .check { display:flex; }
+.previewbar {
+  margin-top:12px; padding:10px; border-radius:16px; background:rgba(223,244,248,.8);
+  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+}
+.previewbar span { font-size:.9rem; font-weight:800; margin-right:auto; }
+.note {
+  margin-top:12px; border-radius:16px; padding:11px 13px;
+  background:rgba(255,255,255,.72); font-size:.91rem; line-height:1.35;
+}
+.modal {
+  position:fixed; inset:0; z-index:30; background:rgba(35,35,35,.45);
+  display:none; place-items:center; padding:14px;
+}
+.modal.show { display:grid; }
+.panel {
+  width:min(780px,96vw); max-height:92vh; overflow:auto;
+  border-radius:24px; background:#fffdf8; padding:18px; box-shadow:0 18px 55px rgba(0,0,0,.28);
+}
+.panel h2 { margin:0 0 10px; font-size:clamp(1.35rem,4vw,2rem); }
+.quiztext { font-size:clamp(1.08rem,3.7vw,1.35rem); line-height:1.4; font-weight:700; }
+.choices { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+.choice {
+  padding:0; overflow:hidden; border-radius:18px; border:3px solid transparent; background:#fff;
+}
+.choice img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; }
+.choice.good { border-color:var(--good); }
+.choice.bad { border-color:#e9a233; animation:shake .28s linear 1; }
+.feedback { min-height:28px; margin-top:10px; font-weight:900; }
+.finish-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+.gallery {
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px;
+}
+.gallery img { width:100%; border-radius:14px; box-shadow:var(--shadow); display:block; }
+.closex { float:right; background:#f1f1f1; }
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 33%{transform:translateX(-6px)} 66%{transform:translateX(6px)}
+}
+@media (max-width:760px) {
+  .grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+  .face { border-radius:14px; }
+  .wrap { padding:9px; }
+  .logo { width:60px; height:60px; }
+  .controls button, .previewbar button { padding:9px 10px; font-size:.9rem; }
+  .gallery { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:400px) {
+  .grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; }
+  .check { width:26px; height:26px; font-size:18px; top:4px; right:4px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="top">
+    <div class="title-row">
+      <img class="logo" src="assets/kartenrueckseite.png" alt="">
+      <div>
+        <h1>Ein Wort – zwei Bedeutungen</h1>
+        <div class="sub">Finde die Karten, die zusammengehören.</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="count active" data-count="6">6 Paare</button>
+      <button class="count" data-count="8">8 Paare</button>
+      <button class="count" data-count="10">10 Paare</button>
+      <button class="count" data-count="12">12 Paare</button>
+      <button class="primary" id="restart">Neu mischen</button>
+    </div>
+
+    <div class="previewbar">
+      <span>Vorschau zum Testen</span>
+      <button class="preview" id="peekAll">Alle Karten aufdecken</button>
+      <button class="preview" id="testNext">Nächstes Paar testen</button>
+      <button class="preview" id="galleryBtn">Alle 30 Karten ansehen</button>
+      <button class="preview" id="questionsBtn">Alle Fragesätze prüfen</button>
+    </div>
+  </section>
+
+  <div class="status">
+    <span id="progress">0 von 6 Paaren gefunden</span>
+    <span id="timing">Neue Karten: 5 Sek. · beide bekannt: 2 Sek.</span>
+  </div>
+
+  <main id="grid" class="grid"></main>
+
+  <div class="note">
+    Gefundene Paare bleiben aufgedeckt, werden angegraut und bekommen ein Häkchen.
+    Die blauen Vorschau-Knöpfe sind nur zum Testen gedacht und können später aus der fertigen App verschwinden.
+  </div>
+</div>
+
+<div id="modal" class="modal">
+  <div class="panel" id="panel"></div>
+</div>
+
+<script>
+const PAIRS = [{"id": "hahn", "word": "HAHN", "a": {"img": "assets/hahn-bauernhof.png", "label": "der Hahn"}, "b": {"img": "assets/hahn-wasserhahn.png", "label": "der Wasserhahn"}, "questions": [{"text": "Der Hahn weckt die Familie jeden Morgen sehr früh.", "answer": "a"}, {"text": "Zwischen den Hühnern läuft stolz der Hahn herum.", "answer": "a"}, {"text": "Lena dreht den Hahn zu, um Wasser zu sparen.", "answer": "b"}, {"text": "Paul füllt seine Trinkflasche am Hahn auf.", "answer": "b"}]}, {"id": "schloss", "word": "SCHLOSS", "a": {"img": "assets/schloss-gebaeude.png", "label": "das Schloss"}, "b": {"img": "assets/schloss-tuerschloss.png", "label": "das Türschloss"}, "questions": [{"text": "Rapunzels langer Zopf hängt aus dem Fenster des alten Schlosses.", "answer": "a"}, {"text": "Im Schloss gibt es einen Saal mit schönen bunten Bildern.", "answer": "a"}, {"text": "Der Schlüssel steckt fest im Schloss.", "answer": "b"}, {"text": "Max schließt das Schloss ab, bevor er das Haus verlässt.", "answer": "b"}]}, {"id": "blatt", "word": "BLATT", "a": {"img": "assets/blatt-baum.png", "label": "das Blatt"}, "b": {"img": "assets/blatt-papier.png", "label": "das Blatt Papier"}, "questions": [{"text": "Im Herbst färbt sich das Blatt gelb.", "answer": "a"}, {"text": "Eine Raupe knabbert ein Loch in das Blatt.", "answer": "a"}, {"text": "Auf dem Blatt steht, was Mia sich zum Geburtstag wünscht.", "answer": "b"}, {"text": "Ben schreibt seinen Namen oben auf das Blatt.", "answer": "b"}]}, {"id": "decke", "word": "DECKE", "a": {"img": "assets/decke-kuscheldecke.png", "label": "die Decke"}, "b": {"img": "assets/decke-zimmerdecke.png", "label": "die Zimmerdecke"}, "questions": [{"text": "Die Katze hat sich unter der warmen Decke versteckt.", "answer": "a"}, {"text": "Paul legt Oma eine Decke über die Beine.", "answer": "a"}, {"text": "An der Decke entdeckt Mia eine kleine Spinne.", "answer": "b"}, {"text": "Der Luftballon schwebt bis hoch an die Decke.", "answer": "b"}]}, {"id": "birne", "word": "BIRNE", "a": {"img": "assets/birne-obst.png", "label": "die Birne"}, "b": {"img": "assets/birne-gluehbirne.png", "label": "die Glühbirne"}, "questions": [{"text": "Paul nimmt die Birne aus der Brotdose und beißt hinein.", "answer": "a"}, {"text": "Mia schneidet die Birne in kleine Stücke.", "answer": "a"}, {"text": "Die Birne ist aus Glas und geht leicht kaputt.", "answer": "b"}, {"text": "Papa wechselt die kaputte Birne aus.", "answer": "b"}]}, {"id": "tor", "word": "TOR", "a": {"img": "assets/tor-fussball.png", "label": "das Tor"}, "b": {"img": "assets/tor-garten.png", "label": "das Gartentor"}, "questions": [{"text": "Der Ball fliegt ins Netz. Paul hat ein Tor geschossen.", "answer": "a"}, {"text": "Die Mannschaft jubelt über das dritte Tor.", "answer": "a"}, {"text": "Am Abend wird das große Tor zum Hof geschlossen.", "answer": "b"}, {"text": "Das Auto fährt langsam durch das offene Tor.", "answer": "b"}]}, {"id": "nagel", "word": "NAGEL", "a": {"img": "assets/nagel-finger.png", "label": "der Nagel"}, "b": {"img": "assets/nagel-metall.png", "label": "der Metallnagel"}, "questions": [{"text": "Mia lackiert sich die Nägel bunt.", "answer": "a"}, {"text": "Unter dem Nagel steckt ein bisschen Erde.", "answer": "a"}, {"text": "Papa hängt das Bild an einen Nagel in der Wand.", "answer": "b"}, {"text": "Der Nagel hält das kleine Regal an seinem Platz.", "answer": "b"}]}, {"id": "schale", "word": "SCHALE", "a": {"img": "assets/schale-gefaess.png", "label": "die Schale"}, "b": {"img": "assets/schale-frucht.png", "label": "die Schale"}, "questions": [{"text": "Mia füllt Erdbeeren in eine Schale.", "answer": "a"}, {"text": "Auf dem Tisch steht eine Schale mit Nüssen.", "answer": "a"}, {"text": "Mia legt die Schale der Melone weg.", "answer": "b"}, {"text": "Ben zieht die Schale von der Mandarine ab.", "answer": "b"}]}, {"id": "schirm", "word": "SCHIRM", "a": {"img": "assets/schirm-regen.png", "label": "der Schirm"}, "b": {"img": "assets/schirm-lampe.png", "label": "der Lampenschirm"}, "questions": [{"text": "Der Wind zerrt Paul den Schirm aus der Hand.", "answer": "a"}, {"text": "Draußen regnet es. Zum Glück hat Ben seinen Schirm dabei.", "answer": "a"}, {"text": "Der Schirm macht das Licht der Lampe schöner.", "answer": "b"}, {"text": "Oma hat für ihre Lampe einen neuen Schirm gekauft.", "answer": "b"}]}, {"id": "schlange", "word": "SCHLANGE", "a": {"img": "assets/schlange-tier.png", "label": "die Schlange"}, "b": {"img": "assets/schlange-menschen.png", "label": "die Schlange"}, "questions": [{"text": "Die Schlange versteckt sich zwischen zwei Steinen.", "answer": "a"}, {"text": "Eine Schlange hat keine Beine.", "answer": "a"}, {"text": "Zum Mittagessen bildet sich im Speisesaal eine lange Schlange.", "answer": "b"}, {"text": "Diese Schlange hat viele Beine.", "answer": "b"}]}, {"id": "strauss", "word": "STRAUSS", "a": {"img": "assets/strauss-vogel.png", "label": "der Strauß"}, "b": {"img": "assets/strauss-blumen.png", "label": "der Blumenstrauß"}, "questions": [{"text": "Der Strauß legt ein sehr großes Ei.", "answer": "a"}, {"text": "Ein Strauß kann schneller laufen als ein Mensch.", "answer": "a"}, {"text": "Kerstin bringt ihrer Mutti zum Geburtstag einen bunten Strauß mit.", "answer": "b"}, {"text": "Auf dem Tisch steht ein Strauß aus roten und gelben Blumen.", "answer": "b"}]}, {"id": "note", "word": "NOTE", "a": {"img": "assets/note-schule.png", "label": "die Note"}, "b": {"img": "assets/note-musik.png", "label": "die Musiknote"}, "questions": [{"text": "Ben freut sich über seine gute Note in der Klassenarbeit.", "answer": "a"}, {"text": "Mia zeigt ihrer Oma stolz ihre gute Note.", "answer": "a"}, {"text": "Die Sängerin singt eine besonders hohe Note.", "answer": "b"}, {"text": "Paul erkennt die Note und spielt den richtigen Ton.", "answer": "b"}]}, {"id": "strom", "word": "STROM", "a": {"img": "assets/strom-fluss.png", "label": "der Strom"}, "b": {"img": "assets/strom-energie.png", "label": "der Strom"}, "questions": [{"text": "Der breite Strom fließt durch mehrere Länder.", "answer": "a"}, {"text": "Viele Schiffe fahren auf dem großen Strom.", "answer": "a"}, {"text": "Plötzlich sind die Lampe und der Kühlschrank aus. Es gibt keinen Strom.", "answer": "b"}, {"text": "Ohne Strom kann Paul seinen Computer nicht einschalten.", "answer": "b"}]}, {"id": "paar", "word": "PAAR", "a": {"img": "assets/paar-menschen.png", "label": "das Paar"}, "b": {"img": "assets/paar-schuhe.png", "label": "das Paar Schuhe"}, "questions": [{"text": "Die beiden sind seit vielen Jahren ein Paar.", "answer": "a"}, {"text": "Auf dem Fest tanzt ein Paar zusammen.", "answer": "a"}, {"text": "Peter hat ein Paar unterschiedliche Socken an.", "answer": "b"}, {"text": "Mia kauft sich ein Paar Handschuhe für den Winter.", "answer": "b"}]}, {"id": "bad", "word": "BAD", "a": {"img": "assets/bad-badezimmer.png", "label": "das Bad"}, "b": {"img": "assets/bad-schwimmbad.png", "label": "das Bad"}, "questions": [{"text": "Nach dem Spielen wäscht sich Ben im Bad die Hände.", "answer": "a"}, {"text": "Mia sucht ihre Zahnbürste im Bad.", "answer": "a"}, {"text": "Weil es heute so warm ist, gehen die Kinder nachmittags ins Bad.", "answer": "b"}, {"text": "Am Wochenende verbringen die Kinder fast den ganzen Nachmittag im Bad.", "answer": "b"}]}];
+const backImage = "assets/kartenrueckseite.png";
+let desiredCount = 6;
+let currentPairs = [];
+let first = null, second = null, busy = false, found = 0, peekMode = false;
+const lastQuestion = {};
+
+function shuffle(a) {
+  a=[...a];
+  for(let i=a.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function updateProgress() {
+  document.getElementById('progress').textContent = `${found} von ${currentPairs.length} Paaren gefunden`;
+}
+
+function build() {
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  first=second=null; busy=false; found=0; peekMode=false;
+  document.getElementById('peekAll').textContent='Alle Karten aufdecken';
+  currentPairs=shuffle(PAIRS).slice(0, desiredCount);
+  const cards=[];
+  currentPairs.forEach(p=>['a','b'].forEach(side=>cards.push({pair:p, pairId:p.id, side, data:p[side]})));
+  shuffle(cards).forEach((c,idx)=>{
+    const el=document.createElement('div');
+    el.className='card';
+    el.dataset.pair=c.pairId;
+    el.dataset.side=c.side;
+    el.dataset.seen='0';
+    el.innerHTML=`
+      <div class="inner">
+        <div class="face back"><img src="${backImage}" alt="Kartenrückseite"></div>
+        <div class="face front"><img src="${c.data.img}" alt="${c.data.label}"></div>
+        <div class="check">✓</div>
+      </div>`;
+    el.addEventListener('click',()=>flip(el,c));
+    grid.appendChild(el);
+  });
+  updateProgress();
+}
+
+function flip(el,c) {
+  if (busy || peekMode || el.classList.contains('flipped') || el.classList.contains('matched')) return;
+  const wasSeen = el.dataset.seen === '1';
+  el.dataset.seen='1';
+  el.classList.add('flipped');
+  const entry={el,c,wasSeen};
+  if(!first) { first=entry; return; }
+  second=entry; busy=true;
+
+  if(first.c.pairId===second.c.pairId) {
+    const p=first.c.pair;
+    first.el.classList.add('matched','locked');
+    second.el.classList.add('matched','locked');
+    found++; updateProgress();
+    first=second=null;
+    setTimeout(()=>showQuiz(p),450);
+  } else {
+    const delay=(first.wasSeen && second.wasSeen) ? 2000 : 5000;
+    document.getElementById('timing').textContent = delay===2000 ? 'Beide Karten schon bekannt: 2 Sekunden.' : 'Mindestens eine Karte neu: 5 Sekunden.';
+    setTimeout(()=>{
+      first.el.classList.remove('flipped');
+      second.el.classList.remove('flipped');
+      first=second=null; busy=false;
+      document.getElementById('timing').textContent='Neue Karten: 5 Sek. · beide bekannt: 2 Sek.';
+    },delay);
+  }
+}
+
+function chooseQuestion(pair) {
+  let options=pair.questions.map((q,i)=>i);
+  if(lastQuestion[pair.id] !== undefined && options.length>1) options=options.filter(i=>i!==lastQuestion[pair.id]);
+  const idx=options[Math.floor(Math.random()*options.length)];
+  lastQuestion[pair.id]=idx;
+  return pair.questions[idx];
+}
+
+function showQuiz(pair) {
+  busy=true;
+  const q=chooseQuestion(pair);
+  const panel=document.getElementById('panel');
+  panel.innerHTML=`
+    <h2>Welches Bild passt zu diesem Satz?</h2>
+    <div class="quiztext">${q.text}</div>
+    <div class="choices" id="choices"></div>
+    <div class="feedback" id="feedback"></div>`;
+  const choices=panel.querySelector('#choices');
+  ['a','b'].forEach(side=>{
+    const b=document.createElement('button');
+    b.className='choice';
+    b.innerHTML=`<img src="${pair[side].img}" alt="${pair[side].label}">`;
+    b.onclick=()=>{
+      if(side===q.answer) {
+        b.classList.add('good');
+        panel.querySelector('#feedback').textContent='✓ Richtig!';
+        setTimeout(()=>{
+          closeModal();
+          busy=false;
+          if(found===currentPairs.length) setTimeout(showFinish,180);
+        },700);
+      } else {
+        b.classList.add('bad');
+        panel.querySelector('#feedback').textContent='Schau noch einmal genau.';
+        setTimeout(()=>b.classList.remove('bad'),550);
+      }
+    };
+    choices.appendChild(b);
+  });
+  document.getElementById('modal').classList.add('show');
+}
+
+function showFinish() {
+  busy=true;
+  const panel=document.getElementById('panel');
+  panel.innerHTML=`
+    <h2>Super! Du hast alle Wortpaare gefunden.</h2>
+    <div class="finish-actions">
+      <button class="primary" id="again">Noch einmal spielen</button>
+      <button id="back">Zur Spielauswahl</button>
+    </div>`;
+  document.getElementById('modal').classList.add('show');
+  panel.querySelector('#again').onclick=()=>{ closeModal(); build(); };
+  panel.querySelector('#back').onclick=()=>{ closeModal(); busy=false; window.scrollTo({top:0,behavior:'smooth'}); };
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+document.getElementById('restart').onclick=build;
+
+document.querySelectorAll('.count').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('.count').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  desiredCount=Number(btn.dataset.count);
+  build();
+});
+
+document.getElementById('peekAll').onclick=()=>{
+  if(busy) return;
+  peekMode=!peekMode;
+  document.querySelectorAll('.card:not(.matched)').forEach(c=>c.classList.toggle('peek',peekMode));
+  document.getElementById('peekAll').textContent=peekMode?'Alle Karten wieder umdrehen':'Alle Karten aufdecken';
+};
+
+document.getElementById('testNext').onclick=()=>{
+  if(busy) return;
+  if(peekMode) {
+    peekMode=false;
+    document.querySelectorAll('.card').forEach(c=>c.classList.remove('peek'));
+    document.getElementById('peekAll').textContent='Alle Karten aufdecken';
+  }
+  const pair=currentPairs.find(p=>!document.querySelector(`.card[data-pair="${p.id}"]`).classList.contains('matched'));
+  if(!pair) { showFinish(); return; }
+  const els=[...document.querySelectorAll(`.card[data-pair="${pair.id}"]`)];
+  els.forEach(el=>{
+    el.dataset.seen='1';
+    el.classList.add('flipped','matched','locked');
+  });
+  found++; updateProgress();
+  setTimeout(()=>showQuiz(pair),350);
+};
+
+document.getElementById('galleryBtn').onclick=()=>{
+  busy=true;
+  const panel=document.getElementById('panel');
+  panel.innerHTML=`<button class="closex" id="closeGallery">Schließen</button>
+    <h2>Alle 30 Karten</h2>
+    <div class="quiztext">Hier kannst du alle 15 Wortpaare ohne Suchen prüfen.</div>
+    <div class="gallery">${PAIRS.flatMap(p=>['a','b'].map(s=>`<img src="${p[s].img}" alt="${p[s].label}">`)).join('')}</div>`;
+  document.getElementById('modal').classList.add('show');
+  panel.querySelector('#closeGallery').onclick=()=>{closeModal(); busy=false;};
+};
+
+
+document.getElementById('questionsBtn').onclick=()=>{
+  busy=true;
+  const panel=document.getElementById('panel');
+  const rows=PAIRS.map(p=>{
+    const qs=p.questions.map((q,i)=>`<li><b>${q.answer==='a'?p.a.label:p.b.label}:</b> ${q.text}</li>`).join('');
+    return `<div style="margin:0 0 18px"><h3 style="margin:0 0 6px">${p.word}</h3><ol style="margin:0;padding-left:22px;line-height:1.45">${qs}</ol></div>`;
+  }).join('');
+  panel.innerHTML=`<button class="closex" id="closeQuestions">Schließen</button>
+    <h2>Alle Fragesätze</h2>
+    <div class="quiztext" style="font-size:1rem;font-weight:400">${rows}</div>`;
+  document.getElementById('modal').classList.add('show');
+  panel.querySelector('#closeQuestions').onclick=()=>{closeModal(); busy=false;};
+};
+
+build();
+</script>
+</body>
+</html>

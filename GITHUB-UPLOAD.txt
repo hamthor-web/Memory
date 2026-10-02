@@ -1,0 +1,13 @@
+GITHUB-UPLOAD
+
+1. ZIP entpacken.
+2. Den kompletten Ordner `memory-ein-wort-zwei-bedeutungen` in dein gewünschtes Repository hochladen.
+3. Die Ordnerstruktur beibehalten:
+   memory-ein-wort-zwei-bedeutungen/
+     index.html
+     assets/
+4. Wenn dein Hauptspiel bereits eine Spielauswahl hat, verlinkst du dort auf:
+   memory-ein-wort-zwei-bedeutungen/
+5. An den bestehenden Service Worker des Hauptprojekts noch nichts ändern, bevor wir die Integration gezielt machen.
+
+Diese Fassung enthält absichtlich noch die Prüfknöpfe.
