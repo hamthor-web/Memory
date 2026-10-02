@@ -1,0 +1,20 @@
+{
+  "id": "/Memory/",
+  "name": "Ein Wort – zwei Bedeutungen",
+  "short_name": "Wort-Memory",
+  "description": "Ein Memory-Lesespiel mit Wörtern, die zwei Bedeutungen haben.",
+  "start_url": "/Memory/",
+  "scope": "/Memory/",
+  "display": "standalone",
+  "background_color": "#f0eee7",
+  "theme_color": "#42a9c2",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
