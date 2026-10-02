@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Ein Wort – zwei Bedeutungen</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#42a9c2">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
 :root {
   --paper:#f0eee7;
@@ -366,6 +369,13 @@ document.getElementById('questionsBtn').onclick=()=>{
 };
 
 build();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.error('Service Worker:', err));
+  });
+}
 </script>
 </body>
 </html>
