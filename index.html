@@ -304,16 +304,6 @@ function closeCard(el,c) {
 
   if(el.classList.contains('matched')) {
     el.classList.add('locked');
-    if(pendingQuiz && pendingQuiz.entries.some(entry=>entry.el===el)) {
-      const allClosed=pendingQuiz.entries.every(entry=>!entry.el.classList.contains('flipped'));
-      if(allClosed && !pendingQuiz.shown) {
-        pendingQuiz.shown=true;
-        renderCompareTray();
-        const pair=pendingQuiz.pair;
-        later(()=>showQuiz(pair),360);
-        return;
-      }
-    }
     renderCompareTray();
     return;
   }
@@ -390,10 +380,25 @@ function flip(el,c) {
     second.el.classList.add('matched');
     found++;
     updateProgress();
-    pendingQuiz={pair:p,entries,shown:false};
+    pendingQuiz={pair:p,entries,shown:true};
     first=second=null;
     renderCompareTray();
+    showMatchConfirmation(p);
   }
+}
+
+function showMatchConfirmation(pair) {
+  busy=true;
+  const panel=document.getElementById('panel');
+  panel.innerHTML=`
+    <h2>✓ Richtiges Paar!</h2>
+    <div class="quiztext">Die beiden Karten gehören zusammen.</div>`;
+  document.getElementById('modal').classList.add('show');
+  panel.focus();
+  later(()=>{
+    closeModal();
+    showQuiz(pair);
+  },700);
 }
 
 function chooseQuestion(pair) {
@@ -428,6 +433,7 @@ function showQuiz(pair) {
         panel.querySelector('#feedback').textContent='✓ Richtig!';
         later(()=>{
           closeModal();
+          pendingQuiz=null;
           busy=false;
           if(found===currentPairs.length) later(showFinish,180);
         },700);
