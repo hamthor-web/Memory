@@ -382,7 +382,13 @@ function flip(el,c) {
     updateProgress();
     pendingQuiz={pair:p,entries,shown:true};
     first=second=null;
+
+    // Das Paar ist gefunden: die große Vergleichsansicht sofort schließen.
+    // Die beiden aufgedeckten Karten bleiben an ihren ursprünglichen
+    // Positionen im Spielfeld sichtbar und bilden den Hintergrund.
+    comparisonActive=false;
     renderCompareTray();
+
     showMatchConfirmation(p);
   }
 }
