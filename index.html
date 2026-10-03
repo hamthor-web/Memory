@@ -282,7 +282,9 @@ function renderCompareTray() {
   const tray=document.getElementById('compareTray');
   tray.innerHTML='';
   const entries=openEntries();
-  tray.classList.toggle('show',entries.length>0);
+  const showComparison=entries.length===2;
+  tray.classList.toggle('show',showComparison);
+  if(!showComparison) return;
   entries.forEach(entry=>{
     const b=document.createElement('button');
     b.type='button';
