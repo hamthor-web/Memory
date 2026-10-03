@@ -57,8 +57,20 @@ button.primary { background:#ffe293; }
 }
 .grid {
   display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:11px;
+  transform:scale(var(--board-scale,1)); transform-origin:top center;
+  transition:transform .24s ease, margin-bottom .24s ease;
 }
-.card { aspect-ratio:1/1; perspective:1000px; cursor:pointer; }
+.card {
+  aspect-ratio:1/1; perspective:1000px; cursor:pointer;
+  position:relative; z-index:1;
+  translate:0 0; scale:1;
+  transition:translate .32s ease, scale .32s ease;
+}
+.card.reading {
+  z-index:40;
+  translate:var(--focus-x,0) var(--focus-y,0);
+  scale:var(--focus-scale,1);
+}
 .card.locked { cursor:default; }
 .inner {
   position:relative; width:100%; height:100%;
@@ -147,12 +159,18 @@ button:focus-visible, .card:focus-visible { outline:3px solid var(--accent); out
     <div class="controls" id="game-controls" hidden>
       <button class="primary" id="restart">Neu mischen</button>
       <button id="selectGame">Zur Spielauswahl</button>
+      <span class="zoom-controls" aria-label="Spielbrett-Zoom">
+        <strong>Spielbrett:</strong>
+        <button type="button" id="zoomOut" aria-label="Spielbrett verkleinern">−</button>
+        <button type="button" id="zoomReset" aria-label="Zoom zurücksetzen">100 %</button>
+        <button type="button" id="zoomIn" aria-label="Spielbrett vergrößern">+</button>
+      </span>
     </div>
   </section>
 
   <div class="status" id="status" hidden>
     <span id="progress">0 von 6 Paaren gefunden</span>
-    <span id="timing">Neue Karten: 5 Sek. · beide bekannt: 2 Sek.</span>
+    <span id="timing">Du bestimmst das Tempo. Tippe eine offene Karte an, wenn du fertig gelesen hast.</span>
   </div>
 
   <main id="grid" class="grid" hidden aria-label="Memory-Karten"></main>
@@ -170,6 +188,8 @@ const backImage = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAwICQ
 let desiredCount = 6;
 let currentPairs = [];
 let first = null, second = null, busy = false, found = 0;
+let pendingQuiz = null;
+let boardZoom = 1;
 const lastQuestion = {};
 const timers = new Set();
 function later(fn, delay) {
@@ -178,7 +198,7 @@ function later(fn, delay) {
 }
 function resetRound() {
   timers.forEach(clearTimeout); timers.clear(); closeModal();
-  first=second=null; busy=false; found=0;
+  first=second=null; pendingQuiz=null; busy=false; found=0;
 }
 function showSelection() {
   resetRound();currentPairs=[];
@@ -200,13 +220,67 @@ function updateProgress() {
   document.getElementById('progress').textContent = `${found} von ${currentPairs.length} Paaren gefunden`;
 }
 
+function applyBoardZoom(value) {
+  boardZoom=Math.max(.60,Math.min(1.15,Math.round(value*100)/100));
+  const grid=document.getElementById('grid');
+  grid.style.setProperty('--board-scale',boardZoom);
+  const h=grid.scrollHeight || 0;
+  grid.style.marginBottom=`${Math.round(h*(boardZoom-1))}px`;
+  document.getElementById('zoomReset').textContent=`${Math.round(boardZoom*100)} %`;
+}
+
+function focusCard(el) {
+  document.querySelectorAll('.card.reading').forEach(card=>{
+    if(card!==el) card.classList.remove('reading');
+  });
+  requestAnimationFrame(()=>{
+    const rect=el.getBoundingClientRect();
+    const targetW=Math.min(window.innerWidth*.78,430);
+    const targetH=Math.min(window.innerHeight*.68,430);
+    const focusScale=Math.max(1,Math.min(3.2,targetW/rect.width,targetH/rect.height));
+    const dx=(window.innerWidth/2-(rect.left+rect.width/2))/boardZoom;
+    const dy=(window.innerHeight/2-(rect.top+rect.height/2))/boardZoom;
+    el.style.setProperty('--focus-x',`${dx}px`);
+    el.style.setProperty('--focus-y',`${dy}px`);
+    el.style.setProperty('--focus-scale',focusScale);
+    el.classList.add('reading');
+  });
+}
+
+function closeCard(el,c) {
+  el.classList.remove('reading','flipped');
+  el.setAttribute('aria-label',`Karte mit ${c.data.label} wieder aufdecken`);
+
+  if(el.classList.contains('matched')) {
+    el.classList.add('locked');
+    if(pendingQuiz && pendingQuiz.cards.includes(el)) {
+      const allClosed=pendingQuiz.cards.every(card=>!card.classList.contains('flipped'));
+      if(allClosed && !pendingQuiz.shown) {
+        pendingQuiz.shown=true;
+        const pair=pendingQuiz.pair;
+        later(()=>showQuiz(pair),360);
+      }
+    }
+    return;
+  }
+
+  if(first && first.el===el) {
+    first=second;
+    second=null;
+  } else if(second && second.el===el) {
+    second=null;
+  }
+  const remaining=second?.el || first?.el;
+  if(remaining && remaining.classList.contains('flipped')) focusCard(remaining);
+}
+
 function build() {
   const grid=document.getElementById('grid');
   grid.innerHTML='';
   resetRound();
   document.getElementById('selection').hidden=true;
   ['grid','status','game-controls'].forEach(id=>document.getElementById(id).hidden=false);
-  document.getElementById('timing').textContent='Neue Karten: 5 Sek. · beide bekannt: 2 Sek.';
+  document.getElementById('timing').textContent='Du bestimmst das Tempo. Tippe eine offene Karte an, wenn du fertig gelesen hast.';
   currentPairs=shuffle(PAIRS).slice(0, desiredCount);
   const cards=[];
   currentPairs.forEach(p=>['a','b'].forEach(side=>cards.push({pair:p, pairId:p.id, side, data:p[side]})));
@@ -217,7 +291,6 @@ function build() {
     el.setAttribute('aria-label', `Karte ${idx+1} aufdecken`);
     el.dataset.pair=c.pairId;
     el.dataset.side=c.side;
-    el.dataset.seen='0';
     el.innerHTML=`
       <div class="inner">
         <div class="face back"><img src="${backImage}" alt="Kartenrückseite"></div>
@@ -228,36 +301,42 @@ function build() {
     grid.appendChild(el);
   });
   updateProgress();
+  applyBoardZoom(desiredCount>=10 ? .80 : desiredCount>=8 ? .90 : 1);
 }
 
 function flip(el,c) {
-  if (busy || el.classList.contains('flipped') || el.classList.contains('matched')) return;
-  const wasSeen = el.dataset.seen === '1';
-  el.dataset.seen='1';
+  if(busy) return;
+
+  if(el.classList.contains('flipped')) {
+    if(el.classList.contains('reading')) closeCard(el,c);
+    else focusCard(el);
+    return;
+  }
+
+  if(el.classList.contains('matched') || el.classList.contains('locked')) return;
+  if(pendingQuiz && !pendingQuiz.cards.includes(el)) return;
+  if(second) return;
+
   el.classList.add('flipped');
-  el.setAttribute('aria-label', c.data.label);
-  const entry={el,c,wasSeen};
-  if(!first) { first=entry; return; }
-  second=entry; busy=true;
+  el.setAttribute('aria-label',`${c.data.label}. Zum Wegdrehen noch einmal antippen.`);
+  focusCard(el);
+  const entry={el,c};
+
+  if(!first) {
+    first=entry;
+    return;
+  }
+
+  second=entry;
 
   if(first.c.pairId===second.c.pairId) {
     const p=first.c.pair;
-    first.el.classList.add('matched','locked');
-    second.el.classList.add('matched','locked');
-    found++; updateProgress();
+    first.el.classList.add('matched');
+    second.el.classList.add('matched');
+    found++;
+    updateProgress();
+    pendingQuiz={pair:p,cards:[first.el,second.el],shown:false};
     first=second=null;
-    later(()=>showQuiz(p),450);
-  } else {
-    const delay=(first.wasSeen && second.wasSeen) ? 2000 : 5000;
-    document.getElementById('timing').textContent = delay===2000 ? 'Beide Karten schon bekannt: 2 Sekunden.' : 'Mindestens eine Karte neu: 5 Sekunden.';
-    later(()=>{
-      first.el.classList.remove('flipped');
-      second.el.classList.remove('flipped');
-      first.el.setAttribute('aria-label','Karte aufdecken');
-      second.el.setAttribute('aria-label','Karte aufdecken');
-      first=second=null; busy=false;
-      document.getElementById('timing').textContent='Neue Karten: 5 Sek. · beide bekannt: 2 Sek.';
-    },delay);
   }
 }
 
@@ -328,6 +407,10 @@ function closeModal() {
 }
 
 document.getElementById('restart').onclick=build;
+document.getElementById('zoomOut').onclick=()=>applyBoardZoom(boardZoom-.10);
+document.getElementById('zoomIn').onclick=()=>applyBoardZoom(boardZoom+.10);
+document.getElementById('zoomReset').onclick=()=>applyBoardZoom(1);
+window.addEventListener('resize',()=>applyBoardZoom(boardZoom));
 
 document.querySelectorAll('.count').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('.count').forEach(b=>b.classList.remove('active'));
