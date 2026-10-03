@@ -209,6 +209,7 @@ let desiredCount = 6;
 let currentPairs = [];
 let first = null, second = null, busy = false, found = 0;
 let pendingQuiz = null;
+let comparisonActive = false;
 let boardZoom = 1;
 const lastQuestion = {};
 const timers = new Set();
@@ -218,7 +219,7 @@ function later(fn, delay) {
 }
 function resetRound() {
   timers.forEach(clearTimeout); timers.clear(); closeModal();
-  first=second=null; pendingQuiz=null; busy=false; found=0;
+  first=second=null; pendingQuiz=null; comparisonActive=false; busy=false; found=0;
   const tray=document.getElementById('compareTray');
   if(tray) { tray.innerHTML=''; tray.classList.remove('show'); }
 }
@@ -282,7 +283,8 @@ function renderCompareTray() {
   const tray=document.getElementById('compareTray');
   tray.innerHTML='';
   const entries=openEntries();
-  const showComparison=entries.length===2;
+  if(entries.length===0) comparisonActive=false;
+  const showComparison=comparisonActive && entries.length>0;
   tray.classList.toggle('show',showComparison);
   if(!showComparison) return;
   entries.forEach(entry=>{
@@ -378,6 +380,7 @@ function flip(el,c) {
   }
 
   second=entry;
+  comparisonActive=true;
   renderCompareTray();
 
   if(first.c.pairId===second.c.pairId) {
