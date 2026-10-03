@@ -210,6 +210,7 @@ let currentPairs = [];
 let first = null, second = null, busy = false, found = 0;
 let pendingQuiz = null;
 let comparisonActive = false;
+let mismatchActive = false;
 let boardZoom = 1;
 const lastQuestion = {};
 const timers = new Set();
@@ -219,7 +220,7 @@ function later(fn, delay) {
 }
 function resetRound() {
   timers.forEach(clearTimeout); timers.clear(); closeModal();
-  first=second=null; pendingQuiz=null; comparisonActive=false; busy=false; found=0;
+  first=second=null; pendingQuiz=null; comparisonActive=false; mismatchActive=false; busy=false; found=0;
   const tray=document.getElementById('compareTray');
   if(tray) { tray.innerHTML=''; tray.classList.remove('show'); }
 }
@@ -308,9 +309,23 @@ function closeCard(el,c) {
     return;
   }
 
+  if(mismatchActive) {
+    const bothClosed =
+      first && second &&
+      !first.el.classList.contains('flipped') &&
+      !second.el.classList.contains('flipped');
+
+    if(bothClosed) {
+      first=second=null;
+      mismatchActive=false;
+      comparisonActive=false;
+    }
+    renderCompareTray();
+    return;
+  }
+
   if(first && first.el===el) {
-    first=second;
-    second=null;
+    first=null;
   } else if(second && second.el===el) {
     second=null;
   }
@@ -357,6 +372,7 @@ function flip(el,c) {
 
   if(el.classList.contains('matched') || el.classList.contains('locked')) return;
   if(pendingQuiz) return;
+  if(mismatchActive) return;
   if(second) return;
 
   el.classList.add('flipped');
@@ -390,6 +406,8 @@ function flip(el,c) {
     renderCompareTray();
 
     showMatchConfirmation(p);
+  } else {
+    mismatchActive=true;
   }
 }
 
