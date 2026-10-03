@@ -1,4 +1,4 @@
-const CACHE='memory-pwa-v10';
+const CACHE='memory-pwa-v11';
 const CORE=[
   "./",
   "./1000256580.png",
