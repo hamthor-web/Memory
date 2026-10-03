@@ -56,20 +56,38 @@ button.primary { background:#ffe293; }
   font-weight:800; font-size:.95rem;
 }
 .grid {
-  display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:11px;
+  display:grid; grid-template-columns:repeat(var(--board-cols,4),minmax(0,1fr)); gap:11px;
   transform:scale(var(--board-scale,1)); transform-origin:top center;
   transition:transform .24s ease, margin-bottom .24s ease;
 }
 .card {
   aspect-ratio:1/1; perspective:1000px; cursor:pointer;
   position:relative; z-index:1;
-  translate:0 0; scale:1;
-  transition:translate .32s ease, scale .32s ease;
 }
-.card.reading {
-  z-index:40;
-  translate:var(--focus-x,0) var(--focus-y,0);
-  scale:var(--focus-scale,1);
+.compare-tray {
+  position:fixed; z-index:45; left:50%; bottom:max(14px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  width:min(94vw,920px);
+  display:none; gap:12px; justify-content:center; align-items:center;
+  pointer-events:none;
+}
+.compare-tray.show { display:flex; }
+.compare-card {
+  pointer-events:auto; padding:0; background:transparent; box-shadow:none;
+  border:0; border-radius:18px;
+  width:min(42vw,360px); aspect-ratio:1/1;
+  overflow:hidden;
+  box-shadow:0 12px 34px rgba(0,0,0,.34);
+  animation:compareIn .24s ease-out;
+}
+.compare-card img { width:100%; height:100%; object-fit:cover; display:block; }
+@keyframes compareIn {
+  from { transform:scale(.72); opacity:.2; }
+  to { transform:scale(1); opacity:1; }
+}
+@media (max-width:420px) and (orientation:portrait) {
+  .compare-tray { gap:8px; }
+  .compare-card { width:min(44vw,260px); }
 }
 .card.locked { cursor:default; }
 .inner {
@@ -178,6 +196,8 @@ button:focus-visible, .card:focus-visible { outline:3px solid var(--accent); out
 
 </div>
 
+<div id="compareTray" class="compare-tray" aria-label="Aufgedeckte Karten zum Vergleichen"></div>
+
 <div id="modal" class="modal">
   <div class="panel" id="panel" role="dialog" aria-modal="true" aria-label="Wortfrage" tabindex="-1"></div>
 </div>
@@ -199,6 +219,8 @@ function later(fn, delay) {
 function resetRound() {
   timers.forEach(clearTimeout); timers.clear(); closeModal();
   first=second=null; pendingQuiz=null; busy=false; found=0;
+  const tray=document.getElementById('compareTray');
+  if(tray) { tray.innerHTML=''; tray.classList.remove('show'); }
 }
 function showSelection() {
   resetRound();currentPairs=[];
@@ -220,47 +242,75 @@ function updateProgress() {
   document.getElementById('progress').textContent = `${found} von ${currentPairs.length} Paaren gefunden`;
 }
 
+function boardColumnsForZoom() {
+  const portrait=window.innerHeight>=window.innerWidth;
+  if(portrait) {
+    if(boardZoom<=.50) return 6;
+    if(boardZoom<=.65) return 5;
+    if(boardZoom<=.85) return 4;
+    return 3;
+  }
+  if(boardZoom<=.50) return 8;
+  if(boardZoom<=.65) return 7;
+  if(boardZoom<=.85) return 6;
+  return 5;
+}
+
 function applyBoardZoom(value) {
-  boardZoom=Math.max(.60,Math.min(1.15,Math.round(value*100)/100));
+  boardZoom=Math.max(.35,Math.min(1.15,Math.round(value*100)/100));
   const grid=document.getElementById('grid');
   grid.style.setProperty('--board-scale',boardZoom);
+  grid.style.setProperty('--board-cols',boardColumnsForZoom());
   const h=grid.scrollHeight || 0;
   grid.style.marginBottom=`${Math.round(h*(boardZoom-1))}px`;
   document.getElementById('zoomReset').textContent=`${Math.round(boardZoom*100)} %`;
 }
 
-function focusCard(el) {
-  document.querySelectorAll('.card.reading').forEach(card=>{
-    if(card!==el) card.classList.remove('reading');
-  });
-  requestAnimationFrame(()=>{
-    const rect=el.getBoundingClientRect();
-    const targetW=Math.min(window.innerWidth*.78,430);
-    const targetH=Math.min(window.innerHeight*.68,430);
-    const focusScale=Math.max(1,Math.min(3.2,targetW/rect.width,targetH/rect.height));
-    const dx=(window.innerWidth/2-(rect.left+rect.width/2))/boardZoom;
-    const dy=(window.innerHeight/2-(rect.top+rect.height/2))/boardZoom;
-    el.style.setProperty('--focus-x',`${dx}px`);
-    el.style.setProperty('--focus-y',`${dy}px`);
-    el.style.setProperty('--focus-scale',focusScale);
-    el.classList.add('reading');
+function openEntries() {
+  const entries=[];
+  if(first?.el?.classList.contains('flipped')) entries.push(first);
+  if(second?.el?.classList.contains('flipped')) entries.push(second);
+  if(pendingQuiz) {
+    pendingQuiz.entries.forEach(entry=>{
+      if(entry.el.classList.contains('flipped') && !entries.some(e=>e.el===entry.el)) entries.push(entry);
+    });
+  }
+  return entries.slice(0,2);
+}
+
+function renderCompareTray() {
+  const tray=document.getElementById('compareTray');
+  tray.innerHTML='';
+  const entries=openEntries();
+  tray.classList.toggle('show',entries.length>0);
+  entries.forEach(entry=>{
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='compare-card';
+    b.setAttribute('aria-label',`${entry.c.data.label}. Zum Wegdrehen antippen.`);
+    b.innerHTML=`<img src="${entry.c.data.img}" alt="${entry.c.data.label}">`;
+    b.onclick=()=>closeCard(entry.el,entry.c);
+    tray.appendChild(b);
   });
 }
 
 function closeCard(el,c) {
-  el.classList.remove('reading','flipped');
+  el.classList.remove('flipped');
   el.setAttribute('aria-label',`Karte mit ${c.data.label} wieder aufdecken`);
 
   if(el.classList.contains('matched')) {
     el.classList.add('locked');
-    if(pendingQuiz && pendingQuiz.cards.includes(el)) {
-      const allClosed=pendingQuiz.cards.every(card=>!card.classList.contains('flipped'));
+    if(pendingQuiz && pendingQuiz.entries.some(entry=>entry.el===el)) {
+      const allClosed=pendingQuiz.entries.every(entry=>!entry.el.classList.contains('flipped'));
       if(allClosed && !pendingQuiz.shown) {
         pendingQuiz.shown=true;
+        renderCompareTray();
         const pair=pendingQuiz.pair;
         later(()=>showQuiz(pair),360);
+        return;
       }
     }
+    renderCompareTray();
     return;
   }
 
@@ -270,8 +320,7 @@ function closeCard(el,c) {
   } else if(second && second.el===el) {
     second=null;
   }
-  const remaining=second?.el || first?.el;
-  if(remaining && remaining.classList.contains('flipped')) focusCard(remaining);
+  renderCompareTray();
 }
 
 function build() {
@@ -301,42 +350,44 @@ function build() {
     grid.appendChild(el);
   });
   updateProgress();
-  applyBoardZoom(desiredCount>=10 ? .80 : desiredCount>=8 ? .90 : 1);
+  applyBoardZoom(desiredCount>=12 ? .70 : desiredCount>=10 ? .78 : desiredCount>=8 ? .88 : 1);
 }
 
 function flip(el,c) {
   if(busy) return;
 
   if(el.classList.contains('flipped')) {
-    if(el.classList.contains('reading')) closeCard(el,c);
-    else focusCard(el);
+    closeCard(el,c);
     return;
   }
 
   if(el.classList.contains('matched') || el.classList.contains('locked')) return;
-  if(pendingQuiz && !pendingQuiz.cards.includes(el)) return;
+  if(pendingQuiz) return;
   if(second) return;
 
   el.classList.add('flipped');
   el.setAttribute('aria-label',`${c.data.label}. Zum Wegdrehen noch einmal antippen.`);
-  focusCard(el);
   const entry={el,c};
 
   if(!first) {
     first=entry;
+    renderCompareTray();
     return;
   }
 
   second=entry;
+  renderCompareTray();
 
   if(first.c.pairId===second.c.pairId) {
     const p=first.c.pair;
+    const entries=[first,second];
     first.el.classList.add('matched');
     second.el.classList.add('matched');
     found++;
     updateProgress();
-    pendingQuiz={pair:p,cards:[first.el,second.el],shown:false};
+    pendingQuiz={pair:p,entries,shown:false};
     first=second=null;
+    renderCompareTray();
   }
 }
 
