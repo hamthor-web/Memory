@@ -1,33 +1,23 @@
 # Ein Wort – zwei Bedeutungen
 
-Eigenständiges Lesespiel / Memory für Kinder.
+Installierbares Wort-Memory mit 20 Wortpaaren und 80 Fragesätzen.
 
-## Dateien
-- `index.html` – das komplette Spiel
-- `assets/` – alle Bildkarten und die Kartenrückseite
+Beim Start werden 6, 8, 10 oder 12 Paare gewählt. Neue Fehlpaare bleiben
+5 Sekunden offen, bereits bekannte Fehlpaare 2 Sekunden. Gefundene Karten
+bleiben angegraut mit Häkchen sichtbar. Zu jedem Treffer folgt eine Wortfrage.
 
 ## GitHub Pages
-Den kompletten Ordner `memory-ein-wort-zwei-bedeutungen` in das Repository hochladen.
-Danach ist das Spiel unter einem Pfad wie diesem erreichbar:
 
-`https://<benutzer>.github.io/<repository>/memory-ein-wort-zwei-bedeutungen/`
+Alle App-Dateien liegen im Repository-Hauptverzeichnis. GitHub Pages muss
+aus dem Hauptverzeichnis des Branches main veröffentlichen:
+https://hamthor-web.github.io/Memory/
 
-## Aktuelle Spielregeln
-- Auswahl: 6, 8, 10 oder 12 Paare
-- zufällige Auswahl aus 15 Wortpaaren
-- neue unbekannte Fehlpaare bleiben 5 Sekunden offen
-- wurden beide Karten bereits gesehen, bleiben sie 2 Sekunden offen
-- gefundene Paare bleiben offen, werden angegraut und bekommen ein Häkchen
-- nach einem Treffer folgt eine zufällige Leseverständnisfrage
-- pro Wortpaar sind 4 Fragen hinterlegt
-- direkte Wiederholung derselben Frage wird vermieden
-- Abschluss: „Super! Du hast alle Wortpaare gefunden.“
+Das Manifest verwendet relative Start-, Scope- und Icon-Pfade.
+Der Service Worker speichert beim ersten Online-Aufruf die komplette App
+einschließlich aller Bilddateien. Nach abgeschlossener Speicherung kann
+die App ohne Internet neu geöffnet und gespielt werden.
 
-## Testfunktionen
-Für die Entwicklungs-/Prüffassung sind enthalten:
-- Alle Karten aufdecken
-- Nächstes Paar testen
-- Alle 30 Karten ansehen
-- Alle Fragesätze prüfen
+Die Icons stammen aus 1000256580.png. Enthalten sind 192- und 512-Pixel-Icons,
+ein 180-Pixel-Apple-Touch-Icon und ein separates maskierbares 512-Pixel-Icon.
 
-Diese Testknöpfe können vor der endgültigen Veröffentlichung entfernt werden.
+Bei Änderungen an gespeicherten Dateien die Cache-Version in sw.js erhöhen.
