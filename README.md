@@ -1,3 +1,13 @@
+# Historischer Vorläufer – ersetzt durch Memory & Lesen
+
+Dieses Repository wird archiviert und nicht mehr weiterentwickelt.
+
+Die aktuelle Fassung von „Ein Wort – zwei Bedeutungen“ liegt in [memory-sammlung/wortmemory](https://github.com/hamthor-web/memory-sammlung/tree/main/docs/wortmemory). Sie enthält auch das Fernrohrbild und den dazu passenden Fragesatz. Die Sammlung verwendet eigene Dateien und benötigt dieses Einzelrepository nicht.
+
+Archivierung von Heike am 29.10.2026 bestätigt. Die folgende Beschreibung dokumentiert den älteren Stand; insbesondere die Zeitangaben zum Schließen von Fehlpaaren gelten nur für diesen Vorläufer.
+
+---
+
 # Ein Wort – zwei Bedeutungen
 
 Installierbares Wort-Memory mit 20 Wortpaaren und 80 Fragesätzen.
